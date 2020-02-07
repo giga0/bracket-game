@@ -3,12 +3,16 @@
     class="nodes-wrapper"
     :class="setNodesWrapperClass()">
     <dropdown
-      v-if="dropdownOptions.length"
+      v-if="dropdownOptions.length && item.is_editable"
       :class="{ 'absolute-center': side === 'center' }"
       :items="dropdownOptions"
       @selectItem="selectOption($event)" />
+    <div
+      v-if="!item.is_editable">
+      {{ item.value.value }}
+    </div>
     <input
-      v-else
+      v-if="!dropdownOptions.length && item.is_editable"
       v-model="item.value.value"
       type="text">
     <div
@@ -20,7 +24,9 @@
         :key="index"
         :item="child"
         :side="setChildNodesSide(index)"
-        :bubled-option="bubbleOption" />
+        :bubled-option="bubbleOption"
+        :step="step"
+        @optionChanged="clearOption($event)" />
     </div>
   </div>
 </template>
@@ -40,7 +46,8 @@ export default {
   props: {
     item: { type: Object },
     side: { type: String },
-    bubledOption: { type: Object }
+    bubledOption: { type: Object },
+    step: { type: Number }
   },
   
   data () {
@@ -53,12 +60,14 @@ export default {
   watch: {
     item: {
       handler (newVal) {
+        console.log('item')
         this.updateChangedOption(newVal)
       },
       deep: true
     },
 
     bubledOption (newVal) {
+      console.log('bubledOption')
       this.updateSelectedOption(newVal)
     }
   },
@@ -86,7 +95,9 @@ export default {
         if (el.is_checked) el.is_checked = false
       })
       option.is_checked = true
+      this.item.value = option
       this.bubbleOption = option
+      this.$emit('optionChanged', option)
     },
     updateChangedOption (item) {
       const options = []
@@ -104,11 +115,25 @@ export default {
         }
       })
       if (updated) {
-        this.dropdownOptions.forEach(option => {
-          if (option.id !== item.id) option.is_checked = false
-        })
+        this.resetCheckedOptions(item)
+        this.item.value = item
         this.bubbleOption = item
       }
+    },
+    clearOption (item) {
+      const valueFound = this.item.children.find(child => {
+        if (child.value && this.item.value) return child.value.value === this.item.value.value
+        else return undefined
+      })
+      if (!valueFound) {
+        this.resetCheckedOptions(item)
+        if (this.item.levelId !== 1) this.$emit('optionChanged', item)
+      }
+    },
+    resetCheckedOptions (item) {
+      this.dropdownOptions.forEach(option => {
+        if (option.id !== item.id) option.is_checked = false
+      })
     }
   }
 }

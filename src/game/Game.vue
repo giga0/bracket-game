@@ -1,5 +1,5 @@
 <template>
-  <div class="game">
+  <div :key="renderKey" class="game">
     <div class="info-panel">
       <h3>Authoring a bracket</h3>
       <p v-if="!contestants.length">As a game master you should specify a bracket with either 4, 8, or 16 contestants.</p>
@@ -16,11 +16,26 @@
       <div class="scroll-container">
         <div class="bracket-wrapper">
           <node
-            v-if="test"
+            v-if="contestants.length"
+            :step="renderKey"
             :item="bracket"
             side="center" />
         </div>
       </div>
+    </div>
+    <div
+      v-if="contestants.length"
+      class="buttons">
+      <btn
+        v-if="user === 'game_master'"
+        @click="moveForward('player')">
+        Play the game (as player)
+      </btn>
+      <btn
+        v-if="user === 'player'"
+        @click="moveForward('game_master')">
+        Identify the winner (as game master)
+      </btn>
     </div>
   </div>
 </template>
@@ -40,6 +55,8 @@ export default {
 
   data () {
     return {
+      user: 'game_master',
+      renderKey: 1,
       bracketNumbers: [
         { id: 1, value: 4, levels: 3, is_checked: false },
         { id: 2, value: 8, levels: 4, is_checked: false },
@@ -48,12 +65,17 @@ export default {
       contestants: [],
       bracket: {
         levelId: 1,
+        is_editable: true,
         value: null,
         children: []
-      },
-      test: false
+      }
     }
   },
+
+  // updated () {
+  //   console.log('updated', this.renderKey)
+  //   console.log('updated', this.bracketNumbers)
+  // },
 
   methods: {
     createContestants (item) {
@@ -75,6 +97,7 @@ export default {
       const lowestLevelChildren = []
       const child = {
         levelId: null,
+        is_editable: true,
         value: null,
         children: []
       }
@@ -83,7 +106,6 @@ export default {
       }
       this.detectLowestLevelChildren(lowestLevelChildren, levels, this.bracket.children)
       this.assignValuesToLowestLevelChildren(lowestLevelChildren)
-      this.test = true
       // console.log(lowestLevelChildren)
     },
     generateTreeStructure (bracket, level, child) {
@@ -109,6 +131,10 @@ export default {
       for (let i = 0; i < lowestLevelChildren.length; i++) {
         lowestLevelChildren[i].value = this.contestants[i]
       }
+    },
+    moveForward (user) {
+      this.user = user
+      this.renderKey++
     }
   }
 }
@@ -153,6 +179,9 @@ export default {
       width: 100%;
       height: 100%;
     }
+  }
+  .buttons {
+    text-align: center;
   }
 }
 </style>
