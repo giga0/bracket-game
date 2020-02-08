@@ -1,9 +1,18 @@
 <template>
-  <div :key="renderKey" class="game">
+  <div
+    :key="renderKey"
+    ref="game"
+    class="game">
     <div class="info-panel">
-      <h3>Authoring a bracket</h3>
-      <p v-if="!contestants.length">As a game master you should specify a bracket with either 4, 8, or 16 contestants.</p>
-      <p v-else>Now, as a game master you can now specify team names and may choose (from dropdowns) a winner of some played games.</p>
+      <template v-if="renderKey === 1">
+        <h3>Authoring a bracket</h3>
+        <p v-if="!contestants.length">As a game master you should specify a bracket with either 4, 8, or 16 contestants.</p>
+        <p v-else>Now, as a game master you can now specify team names and may choose (from dropdowns) a winner of some played games.</p>
+      </template>
+      <template v-if="renderKey === 2">
+        <h3>Playing a bracket game</h3>
+        <p>As a player you should now complete a bracket game by selecting a value for its dropdowns.</p>
+      </template>
     </div>
     <div class="game-panel">
       <div
@@ -19,6 +28,7 @@
             v-if="contestants.length"
             :step="renderKey"
             :item="bracket"
+            :contestants="contestants"
             side="center" />
         </div>
       </div>
@@ -44,7 +54,7 @@
 /* eslint-disable */
 import Btn from '@/-common-/components/Button'
 import Dropdown from '@/-common-/components/Dropdown'
-import Node from '@/-common-/components/Node'
+import Node from '@/game/Node'
 
 const cloneDeep = require('lodash.clonedeep')
 
@@ -55,21 +65,39 @@ export default {
 
   data () {
     return {
-      user: 'game_master',
       renderKey: 1,
       bracketNumbers: [
         { id: 1, value: 4, levels: 3, is_checked: false },
         { id: 2, value: 8, levels: 4, is_checked: false },
         { id: 3, value: 16, levels: 5, is_checked: false }
       ],
-      contestants: [],
-      bracket: {
+      contestants: []
+    }
+  },
+
+  computed: {
+    user () {
+      return this.$store.state.user
+    },
+    bracket () {
+      // console.log(this.$store.state.bracket)
+      const initialBracket = {
         levelId: 1,
         is_editable: true,
         value: null,
         children: []
       }
+      if (this.user === 'game_master') return cloneDeep(this.$store.state.playedBracket) || initialBracket
+      if (this.user === 'player') return cloneDeep(this.$store.state.authBracket) || initialBracket
     }
+  },
+
+  created () {
+    document.addEventListener('click', this.closeDropdownList)
+  },
+
+  beforeDestroy () {
+    document.removeEventListener('click', this.closeDropdownList)
   },
 
   // updated () {
@@ -78,6 +106,11 @@ export default {
   // },
 
   methods: {
+    closeDropdownList (e) {
+      e.stopPropagation()
+      const visibleList = document.getElementsByClassName('list is-visible')[0]
+      if (visibleList && !e.target.classList.contains('d-target')) visibleList.classList.remove('is-visible')
+    },
     createContestants (item) {
       this.bracketNumbers.forEach(el => {
         if (el.id === item.id) el.is_checked = true
@@ -86,7 +119,10 @@ export default {
         const contestant ={
           id: i + 1,
           value: `team-${i + 1}`,
-          img: null,
+          img: {
+            file: null,
+            result: null
+          },
           is_checked: false
         }
         this.contestants.push(contestant)
@@ -106,7 +142,6 @@ export default {
       }
       this.detectLowestLevelChildren(lowestLevelChildren, levels, this.bracket.children)
       this.assignValuesToLowestLevelChildren(lowestLevelChildren)
-      // console.log(lowestLevelChildren)
     },
     generateTreeStructure (bracket, level, child) {
       child.levelId = level
@@ -132,8 +167,20 @@ export default {
         lowestLevelChildren[i].value = this.contestants[i]
       }
     },
+    setChildrenEditableStatus (item) {
+      if (!item.children.length) return
+      for (let child of item.children) {
+        if (child.value) child.is_editable = false
+        this.setChildrenEditableStatus(child)
+      }
+    },
     moveForward (user) {
-      this.user = user
+      const bracket = cloneDeep(this.bracket)
+      if (bracket.value) bracket.is_editable = false
+      this.setChildrenEditableStatus(bracket)
+      if (user === 'player') this.$store.commit('setAuthBracket', bracket)
+      if (user === 'game_master') this.$store.commit('setPlayedBracket', bracket)
+      this.$store.commit('setUser', user)
       this.renderKey++
     }
   }
@@ -145,9 +192,10 @@ export default {
 
 .game {
   width: 100%;
-  padding: 3rem 1rem 0;
+  padding: 1rem;
   @include breakpoint(desktop) {
-    width: 144rem;
+    width: 185.6rem;
+    padding: 3rem 1rem;
     margin: 0 auto;
   }
   .info-panel {
@@ -173,8 +221,8 @@ export default {
     }
   }
   .bracket-wrapper {
-    width: 120rem;
-    height: 75vh;
+    width: 160rem;
+    height: 65vh;
     @include breakpoint(desktop) {
       width: 100%;
       height: 100%;

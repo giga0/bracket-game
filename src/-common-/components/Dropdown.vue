@@ -3,9 +3,9 @@
     <div
       class="wrapper"
       @click="onClick">
-      <button class="selected">
-        <span>{{ selected }}</span>
-        <div class="triangle"></div>
+      <button class="selected d-target">
+        <span class="d-target">{{ selected }}</span>
+        <div class="triangle d-target"></div>
       </button>
       <div
         ref="list"
@@ -170,6 +170,7 @@ export default {
           margin-bottom: 0;
         }
         &.is-checked {
+          pointer-events: none;
           .checkmark {
             opacity: 1;
           }
