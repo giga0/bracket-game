@@ -1,17 +1,20 @@
 <template>
   <div
     :key="renderKey"
-    ref="game"
     class="game">
     <div class="info-panel">
       <template v-if="renderKey === 1">
         <h3>Authoring a bracket</h3>
-        <p v-if="!contestants.length">As a game master you should specify a bracket with either 4, 8, or 16 contestants.</p>
-        <p v-else>Now, as a game master you can now specify team names and may choose (from dropdowns) a winner of some played games.</p>
+        <p v-if="!contestants.length">As a game master, you should specify a bracket with either 4, 8, or 16 contestants.</p>
+        <p v-else>Now, as a game master, you can specify team names/logos and may choose (from dropdowns) a winner for some played games.</p>
       </template>
       <template v-if="renderKey === 2">
         <h3>Playing a bracket game</h3>
-        <p>As a player you should now complete a bracket game by selecting a value for its dropdowns.</p>
+        <p>As a player, you should now complete a bracket game by selecting a value for its dropdowns.</p>
+      </template>
+      <template v-if="renderKey === 3">
+        <h3>Identify the winning bracket</h3>
+        <p>As a game master, you should now complete the authored bracket by selecting a value for its dropdowns.</p>
       </template>
     </div>
     <div class="game-panel">
@@ -22,14 +25,16 @@
           :items="bracketNumbers"
           @selectItem="createContestants($event)" />
       </div>
-      <div class="scroll-container">
+      <div
+        class="scroll-container"
+        :class="{ 'scroll-container--small': contestants.length === 4 }">
         <div class="bracket-wrapper">
           <node
             v-if="contestants.length"
-            :step="renderKey"
             :item="bracket"
             :contestants="contestants"
-            side="center" />
+            side="center"
+            @checkSubmitValidity="checkSubmitValidity" />
         </div>
       </div>
     </div>
@@ -37,21 +42,23 @@
       v-if="contestants.length"
       class="buttons">
       <btn
-        v-if="user === 'game_master'"
-        @click="moveForward('player')">
-        Play the game (as player)
-      </btn>
-      <btn
-        v-if="user === 'player'"
-        @click="moveForward('game_master')">
-        Identify the winner (as game master)
+        :disabled="isSubmitDisabled"
+        @click="moveForward(renderKey === 1 ? 'player' : 'game_master')">
+        <template v-if="renderKey === 1">
+          Finish authoring the bracket
+        </template>
+        <template v-if="renderKey === 2">
+          Submit the bracket
+        </template>
+        <template v-if="renderKey === 3">
+          Identify the winning bracket
+        </template>
       </btn>
     </div>
   </div>
 </template>
 
 <script>
-/* eslint-disable */
 import Btn from '@/-common-/components/Button'
 import Dropdown from '@/-common-/components/Dropdown'
 import Node from '@/game/Node'
@@ -71,7 +78,8 @@ export default {
         { id: 2, value: 8, levels: 4, is_checked: false },
         { id: 3, value: 16, levels: 5, is_checked: false }
       ],
-      contestants: []
+      contestants: [],
+      isSubmitDisabled: false
     }
   },
 
@@ -80,15 +88,16 @@ export default {
       return this.$store.state.user
     },
     bracket () {
-      // console.log(this.$store.state.bracket)
+      let bracket
       const initialBracket = {
         levelId: 1,
         is_editable: true,
         value: null,
         children: []
       }
-      if (this.user === 'game_master') return cloneDeep(this.$store.state.playedBracket) || initialBracket
-      if (this.user === 'player') return cloneDeep(this.$store.state.authBracket) || initialBracket
+      if (this.user === 'game_master') bracket = cloneDeep(this.$store.state.authBracket) || initialBracket
+      if (this.user === 'player') bracket = cloneDeep(this.$store.state.authBracket)
+      return bracket
     }
   },
 
@@ -100,11 +109,6 @@ export default {
     document.removeEventListener('click', this.closeDropdownList)
   },
 
-  // updated () {
-  //   console.log('updated', this.renderKey)
-  //   console.log('updated', this.bracketNumbers)
-  // },
-
   methods: {
     closeDropdownList (e) {
       e.stopPropagation()
@@ -112,11 +116,9 @@ export default {
       if (visibleList && !e.target.classList.contains('d-target')) visibleList.classList.remove('is-visible')
     },
     createContestants (item) {
-      this.bracketNumbers.forEach(el => {
-        if (el.id === item.id) el.is_checked = true
-      })
+      item.is_checked = true
       for (let i = 0; i < item.value; i++) {
-        const contestant ={
+        const contestant = {
           id: i + 1,
           value: `team-${i + 1}`,
           img: {
@@ -130,41 +132,34 @@ export default {
       this.createBracket(item.levels)
     },
     createBracket (levels) {
-      const lowestLevelChildren = []
       const child = {
         levelId: null,
         is_editable: true,
         value: null,
         children: []
       }
+      const contestantsDummy = new Array(this.contestants.length)
       for (let i = 0; i < levels; i++) {
-        this.generateTreeStructure(this.bracket, i + 1, child)
+        this.generateTreeStructure(this.bracket, i + 1, child, levels, contestantsDummy)
       }
-      this.detectLowestLevelChildren(lowestLevelChildren, levels, this.bracket.children)
-      this.assignValuesToLowestLevelChildren(lowestLevelChildren)
     },
-    generateTreeStructure (bracket, level, child) {
+    generateTreeStructure (bracket, level, child, lowestLevel, contestantsDummy) {
       child.levelId = level
       if (level > 1) {
         if (bracket.children.length === 2) {
           for (let item of bracket.children) {
-            this.generateTreeStructure(item, level, child)
+            this.generateTreeStructure(item, level, child, lowestLevel, contestantsDummy)
           }
         } else {
-          bracket.children.push(cloneDeep(child))
-          bracket.children.push(cloneDeep(child))
+          for (let i = 0; i < 2; i++) {
+            const childClone = cloneDeep(child)
+            if (level === lowestLevel) {
+              childClone.value = this.contestants[this.contestants.length - contestantsDummy.length]
+              contestantsDummy.shift()
+            }
+            bracket.children.push(childClone)
+          }
         }
-      }
-    },
-    detectLowestLevelChildren (lowestLevelChildren, lowestLevel, children) {
-      for (let child of children) {
-        if (child.levelId === lowestLevel) lowestLevelChildren.push(child)
-        else this.detectLowestLevelChildren(lowestLevelChildren, lowestLevel, child.children)
-      }
-    },
-    assignValuesToLowestLevelChildren (lowestLevelChildren) {
-      for (let i = 0; i < lowestLevelChildren.length; i++) {
-        lowestLevelChildren[i].value = this.contestants[i]
       }
     },
     setChildrenEditableStatus (item) {
@@ -178,10 +173,30 @@ export default {
       const bracket = cloneDeep(this.bracket)
       if (bracket.value) bracket.is_editable = false
       this.setChildrenEditableStatus(bracket)
+      if (this.renderKey === 3 && user === 'game_master') {
+        this.$store.commit('setAuthBracket', bracket)
+        this.$router.push({ name: 'Result' })
+        return
+      }
       if (user === 'player') this.$store.commit('setAuthBracket', bracket)
       if (user === 'game_master') this.$store.commit('setPlayedBracket', bracket)
       this.$store.commit('setUser', user)
       this.renderKey++
+      this.checkSubmitValidity()
+    },
+    checkSubmitValidity () {
+      if (this.renderKey === 1) return
+      const values = []
+      this.gatherValues(this.bracket, values)
+      this.isSubmitDisabled = values.includes(null)
+    },
+    gatherValues (item, values) {
+      values.push(item.value)
+      if (item.children.length) {
+        for (let child of item.children) {
+          this.gatherValues(child, values)
+        }
+      }
     }
   }
 }
@@ -218,6 +233,9 @@ export default {
     overflow: scroll;
     @include breakpoint(desktop) {
       overflow: inherit;
+    }
+    &--small {
+      padding-top: 3rem;
     }
   }
   .bracket-wrapper {

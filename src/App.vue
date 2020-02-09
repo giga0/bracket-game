@@ -7,7 +7,7 @@
 
 <script>
 export default {
-  name: 'app'
+  name: 'App'
 }
 </script>
 
@@ -15,7 +15,7 @@ export default {
 @import "./-common-/assets/style/main";
 
 #app {
-  font-family: 'NunitoRegular';
+  font-family: 'NunitoRegular', sans-serif;
   color: $font-color;
   @include fontSizeRem(12, 18);
   width: 100%;
@@ -38,7 +38,7 @@ export default {
     }
   }
   .heading {
-    font-family: 'NunitoBold';
+    font-family: 'NunitoBold', sans-serif;
     color: $black;
     @include fontSizeRem(20, 40);
     text-align: center;

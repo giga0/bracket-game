@@ -3,12 +3,14 @@ import Router from 'vue-router'
 
 import HomeRoute from '@/home/route'
 import GameRoute from '@/game/route'
+import ResultRoute from '@/result/route'
 
 Vue.use(Router)
 
 const routesList = [].concat(
   HomeRoute,
-  GameRoute
+  GameRoute,
+  ResultRoute
 )
 
 const router = new Router({

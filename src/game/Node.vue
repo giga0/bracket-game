@@ -1,7 +1,7 @@
 <template>
   <div
     class="nodes-wrapper"
-    :class="setNodesWrapperClass()">
+    :class="side">
     <div class="contestant-wrapper">
       <div class="logo-upload">
         <template v-if="!item.children.length && item.is_editable">
@@ -14,14 +14,22 @@
             :for="`logoUpload-${item.value.id}`"
             class="logo-preview">
             <div
-              :style="{ backgroundImage: `url(${item.value && item.value.img.result ? item.value.img.result : 'https://www.freeiconspng.com/uploads/shield-png-26.png'})` }" />
+              :style="{ backgroundImage: `url(${item.value && item.value.img.result
+                ? item.value.img.result
+                : 'https://www.freeiconspng.com/uploads/shield-png-26.png'})`
+              }"
+            />
           </label>
         </template>
         <div
           v-else
           class="logo-preview">
           <div
-            :style="{ backgroundImage: `url(${item.value && item.value.img.result ? item.value.img.result : 'https://www.freeiconspng.com/uploads/shield-png-26.png'})` }" />
+            :style="{ backgroundImage: `url(${item.value && item.value.img.result
+              ? item.value.img.result
+              : 'https://www.freeiconspng.com/uploads/shield-png-26.png'})`
+            }"
+          />
         </div>
       </div>
       <div
@@ -49,15 +57,14 @@
         :item="child"
         :side="setChildNodesSide(index)"
         :bubled-option="bubbleOption"
-        :step="step"
         :contestants="contestants"
-        @optionChanged="clearOption($event)" />
+        @optionChanged="clearOption($event)"
+        @checkSubmitValidity="$emit('checkSubmitValidity')" />
     </div>
   </div>
 </template>
 
 <script>
-/* eslint-disable */
 import Node from '@/game/Node'
 import Dropdown from '@/-common-/components/Dropdown'
 
@@ -72,8 +79,6 @@ export default {
     item: { type: Object },
     side: { type: String },
     bubledOption: { type: Object },
-    // TODO: remove below
-    step: { type: Number },
     contestants: { type: Array }
   },
   
@@ -87,14 +92,11 @@ export default {
   watch: {
     item: {
       handler () {
-        // console.log('item')
         this.updateChangedOption()
       },
       deep: true
     },
-
     bubledOption (newVal) {
-      // console.log('bubledOption')
       this.updateSelectedOption(newVal)
     }
   },
@@ -104,9 +106,6 @@ export default {
   },
   
   methods: {
-    setNodesWrapperClass () {
-      return this.side
-    },
     setChildNodesSide (index) {
       if (this.side !== 'center') return this.side
       return this.item.levelId === 1 && index === 0 ? 'right' : 'left'
@@ -122,43 +121,46 @@ export default {
       }
     },
     selectOption (option) {
-      // console.log('selectOption')
-      this.dropdownOptions.forEach(el => {
-        if (el.is_checked) el.is_checked = false
-      })
+      for (let el of this.dropdownOptions) {
+        if (el.is_checked) {
+          el.is_checked = false
+        }
+      }
       option.is_checked = true
       this.item.value = option
       this.bubbleOption = option
       this.$emit('optionChanged', option)
+      this.$emit('checkSubmitValidity')
     },
     updateChangedOption () {
-      this.dropdownOptions.forEach(option => {
-        this.contestants.forEach(contestant => {
+      for (let option of this.dropdownOptions) {
+        for (let contestant of this.contestants) {
           if (contestant.id === option.id) {
             if (contestant.value !== option.value) option.value = contestant.value
             if (contestant.img.result !== option.img.result) option.img.result = contestant.img.result
+            break
           }
-        })
-      })
+        }
+      }
     },
     updateSelectedOption (item) {
-      // console.log('updateSelectedOption')
       if (!item) return
       let updated = false
-      this.dropdownOptions.forEach(option => {
+      for (let option of this.dropdownOptions) {
         if (option.id === item.id) {
           option.is_checked = true
           updated = true
+          break
         }
-      })
+      }
       if (updated) {
         this.resetCheckedOptions(item)
         this.item.value = item
         this.bubbleOption = item
+        this.$emit('checkSubmitValidity')
       }
     },
     clearOption (item) {
-      // console.log('clearOption')
       const valueFound = this.item.children.find(child => this.item.value && child.value && this.item.value.id === child.value.id)
       if (!valueFound) {
         this.item.value = null
@@ -166,18 +168,19 @@ export default {
         this.resetCheckedOptions(item)
         if (this.item.levelId !== 1) this.$emit('optionChanged', item)
       }
+      this.$emit('checkSubmitValidity')
     },
     resetCheckedOptions (item) {
-      this.dropdownOptions.forEach(option => {
-        if (option.id !== item.id) option.is_checked = false
-      })
+      for (let option of this.dropdownOptions) {
+        if (option.id !== item.id) {
+          option.is_checked = false
+        }
+      }
     },
     onLogoChange (e) {
       if (!e.target.files || !e.target.files[0]) return
       const reader = new FileReader()
-      reader.onload = e => {
-        this.item.value.img.result = e.target.result
-      }
+      reader.onload = e => this.item.value.img.result = e.target.result
       reader.readAsDataURL(e.target.files[0]);
       this.item.value.img.file = e.target.files[0]
     }
@@ -248,8 +251,13 @@ export default {
         }
       }
       label.logo-preview {
+        border-color: $blue;
         display: block;
         cursor: pointer;
+        transition: border-color .2s ease;
+        &:hover {
+          border-color: lighten($blue, 30%);
+        }
       }
     }
   }
@@ -258,8 +266,15 @@ export default {
     justify-content: center;
     > .contestant-wrapper {
       position: absolute;
-      top: 50%;
+      top: 45%;
       transform: translateY(-50%);
+      &::after {
+        content: 'winner';
+        position: absolute;
+        bottom: -55%;
+        left: 50%;
+        transform: translate(-10%, -10%);
+      }
       .logo-upload {
         margin-right: 1rem;
       }

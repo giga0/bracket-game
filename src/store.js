@@ -2,7 +2,16 @@ import Vue from 'vue'
 import Vuex from 'vuex'
 
 Vue.use(Vuex)
-/* eslint-disable */
+
+const gatherValues = (values, item) => {
+  if (!item.value) return
+  values.push(item.value.value)
+  if (item.children.length) {
+    for (let child of item.children) {
+      gatherValues(values, child)
+    }
+  }
+}
 
 /************
 *   STATE   *
@@ -11,6 +20,22 @@ const state = {
   user: 'game_master',
   authBracket: null,
   playedBracket: null
+}
+
+/**************
+*   GETTERS   *
+**************/
+const getters = {
+  getAuthBracketValues: state => {
+    const values = []
+    gatherValues(values, state.authBracket)
+    return values
+  },
+  getPlayedBracketValues: state => {
+    const values = []
+    gatherValues(values, state.playedBracket)
+    return values
+  }
 }
 
 /****************
@@ -30,6 +55,7 @@ const mutations = {
 
 const store = {
   state,
+  getters,
   mutations
 }
 

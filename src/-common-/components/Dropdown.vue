@@ -113,7 +113,7 @@ export default {
     }
     span {
       color: $font-color;
-      font-family: 'NunitoRegular';
+      font-family: 'NunitoRegular', sans-serif;
       @include fontSizeRem(12, 18);
       line-height: 2;
       letter-spacing: -0.33px;
@@ -146,7 +146,7 @@ export default {
       z-index: 1;
       position: relative;
       background-color: $white;
-      max-height: 20rem;
+      max-height: 15rem;
       padding: 1rem 1.5rem;
       @include breakpoint(desktop) {
         max-height: 25rem;

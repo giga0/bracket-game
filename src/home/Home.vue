@@ -22,7 +22,7 @@ export default {
 
   methods: {
     startGame () {
-      this.$router.push({ name: 'Game' });
+      this.$router.push({ name: 'Game' })
     }
   }
 }

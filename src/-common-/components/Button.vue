@@ -1,5 +1,7 @@
 <template functional>
-  <button :style="{ backgroundColor: props.color }"
+  <button
+    :style="{ backgroundColor: props.color }"
+    :disabled="props.disabled"
     @click="listeners.click">
     <slot/>
   </button>
@@ -10,7 +12,8 @@ export default {
   name: 'Button',
   
   props: {
-    color: { type: String }
+    color: { type: String },
+    disabled: { type: Boolean }
   }
 }
 </script>
@@ -24,9 +27,13 @@ button {
   background-color: $blue;
   padding: .8rem;
   border-radius: 15px;
+  &:disabled {
+    cursor: not-allowed;
+    background-color: $darkgrey;
+  }
   @include breakpoint(desktop) {
     padding: 1.2rem;
-    &:hover {
+    &:not(:disabled):hover {
       box-shadow: 0 3px 6px 0 rgba(0, 0, 0, 0.3);
     }
   }
