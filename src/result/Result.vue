@@ -28,6 +28,11 @@ export default {
       }
       return true
     }
+  },
+
+  destroyed () {
+    this.$store.commit('setAuthBracket', null)
+    this.$store.commit('setPlayedBracket', null)
   }
 }
 </script>
